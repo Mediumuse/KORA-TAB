@@ -2,6 +2,10 @@
 
 A standalone browser app for practicing Kora parts from MIDI files. Open `index.html` in a modern browser, choose or drop a `.mid`/`.midi` file, then use the transport controls to follow the highlighted strings and hear synthesized playback.
 
+## Hosting on GitHub Pages
+
+The repository includes a GitHub Actions workflow that deploys the site whenever changes are pushed to `main`. In the repository settings, open **Pages** and choose **GitHub Actions** as the build and deployment source. The initial setup may require an administrator, and Pages availability for a private repository depends on the GitHub plan. Check the repository's Pages visibility settings before sharing the site URL.
+
 ## Playback controls
 
 - Play/pause and stop.
