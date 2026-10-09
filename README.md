@@ -12,6 +12,7 @@ The repository includes a GitHub Actions workflow that deploys the site whenever
 - Seek through the piece and choose a playback speed from 0.5× to 1.5×.
 - Use the playback bar at the bottom of the Kora Map to play/pause, stop, seek, and change speed.
 - Press any string circle on the map to audition its tuned note.
+- Toggle between light and dark themes; the selected theme is remembered on this device.
 - Toggle the string map fullscreen while playback continues.
 - Hear a lightweight, plucked-string-style Web Audio synthesis synchronized with the map.
 - Strings light up for the duration of their MIDI notes; shortly upcoming notes get a subtle preview.

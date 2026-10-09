@@ -42,6 +42,9 @@ const elements = {
   loadFMajorScale: document.querySelector("#load-f-major-scale"),
   loadFMajorPentatonic: document.querySelector("#load-f-major-pentatonic"),
   loadGreensleeves: document.querySelector("#load-greensleeves"),
+  themeToggle: document.querySelector("#theme-toggle"),
+  themeIcon: document.querySelector("#theme-icon"),
+  themeColor: document.querySelector('meta[name="theme-color"]'),
   mapView: document.querySelector("#map-view"),
   songName: document.querySelector("#map-song-name"),
   currentTime: document.querySelector("#map-current-time"),
@@ -59,6 +62,17 @@ const elements = {
   unmappedCount: document.querySelector("#unmapped-count"),
   unmappedNotes: document.querySelector("#unmapped-notes")
 };
+
+function setTheme(isDark) {
+  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  elements.themeToggle.setAttribute("aria-pressed", String(isDark));
+  elements.themeToggle.setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} mode`);
+  elements.themeToggle.title = `Switch to ${isDark ? "light" : "dark"} mode`;
+  elements.themeIcon.textContent = isDark ? "☀" : "☾";
+  elements.themeColor.content = isDark ? "#111827" : "#f4f2ec";
+}
+
+setTheme(document.documentElement.dataset.theme === "dark");
 
 let song = null;
 let startedAt = 0;
@@ -590,6 +604,15 @@ elements.fileInput.addEventListener("change", () => loadFile(elements.fileInput.
 elements.loadFMajorScale.addEventListener("click", loadFMajorScale);
 elements.loadFMajorPentatonic.addEventListener("click", loadFMajorPentatonic);
 elements.loadGreensleeves.addEventListener("click", loadGreensleeves);
+elements.themeToggle.addEventListener("click", () => {
+  const isDark = document.documentElement.dataset.theme !== "dark";
+  setTheme(isDark);
+  try {
+    localStorage.setItem("kora-theme", isDark ? "dark" : "light");
+  } catch (error) {
+    console.warn("Theme preference could not be saved.", error);
+  }
+});
 elements.stringMap.addEventListener("click", (event) => {
   const slot = event.target.closest(".string-slot");
   if (!slot) return;

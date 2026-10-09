@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f4f2ec">
     <title>Kora String Map</title>
+    <script>
+      try {
+        if (localStorage.getItem("kora-theme") === "dark") {
+          document.documentElement.dataset.theme = "dark";
+          document.querySelector('meta[name="theme-color"]').content = "#111827";
+        }
+      } catch (error) {
+        console.warn("Saved theme preference could not be read.", error);
+      }
+    </script>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -14,12 +24,15 @@
           <span class="brand-mark" aria-hidden="true">K</span>
           <span>Kora <span class="brand-light">String Map</span></span>
         </a>
-        <span class="topbar-note">A MIDI practice companion</span>
+        <div class="topbar-actions">
+          <span class="topbar-note">A MIDI practice companion</span>
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false" title="Switch to dark mode">
+            <span id="theme-icon" aria-hidden="true">☾</span>
+          </button>
+        </div>
       </header>
 
-      <section class="intro" aria-labelledby="page-title">
-        <p class="eyebrow">21 strings · one clear view</p>
-        <h1 id="page-title">Follow the music.<br><span>Find the string.</span></h1>
+      <section class="intro" aria-label="MIDI instructions">
         <p class="intro-copy">Choose a MIDI file, then use the player below the map to follow the highlighted Kora strings.</p>
       </section>
 
@@ -55,16 +68,18 @@
                 <span>Press a circle to hear its note. Octaves: left string 1 = F1; right string 1 = F2.</span>
               </div>
               <div class="map-heading-tools">
-                <div class="legend" role="group" aria-label="String highlight legend">
-                  <span class="legend-item"><span class="legend-marker legend-marker-upcoming" aria-hidden="true"></span>Coming up</span>
-                  <span class="legend-item"><span class="legend-marker legend-marker-active" aria-hidden="true"></span>Pluck now</span>
-                </div>
                 <button id="fullscreen-toggle" class="fullscreen-button" type="button" aria-pressed="false" aria-label="Enter fullscreen">⛶ <span>Fullscreen</span></button>
               </div>
             </div>
           </div>
-          <div class="hands-labels" aria-hidden="true">
-            <span>LEFT HAND</span><span>RIGHT HAND</span>
+          <div class="map-label-row">
+            <div class="hands-labels" aria-hidden="true">
+              <span>LEFT HAND</span><span>RIGHT HAND</span>
+            </div>
+            <div class="legend" role="group" aria-label="String highlight legend">
+              <span class="legend-item"><span class="legend-marker legend-marker-upcoming" aria-hidden="true"></span>Coming up</span>
+              <span class="legend-item"><span class="legend-marker legend-marker-active" aria-hidden="true"></span>Pluck now</span>
+            </div>
           </div>
           <div id="string-map" class="string-map" aria-label="Kora Map"></div>
           <div id="map-player" class="map-player" role="group" aria-label="MIDI playback controls">
