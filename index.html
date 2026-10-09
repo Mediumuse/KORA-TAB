@@ -75,21 +75,26 @@
         <p id="feedback" class="feedback" role="status" aria-live="polite">Choose a MIDI file to get started.</p>
       </section>
 
-      <section class="map-section" aria-labelledby="map-title">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">THE INSTRUMENT</p>
-            <h2 id="map-title">String map</h2>
+      <section id="map-view" class="map-section" aria-labelledby="map-title">
+        <div class="map-view-content">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">THE INSTRUMENT</p>
+              <h2 id="map-title">String map</h2>
+            </div>
+            <div class="map-heading-actions">
+              <div class="legend"><span class="legend-dot" aria-hidden="true"></span>Pluck now</div>
+              <button id="fullscreen-toggle" class="fullscreen-button" type="button" aria-pressed="false" aria-label="Enter fullscreen">⛶ <span>Fullscreen</span></button>
+            </div>
           </div>
-          <div class="legend"><span class="legend-dot" aria-hidden="true"></span>Pluck now</div>
-        </div>
-        <div class="hands-labels" aria-hidden="true">
-          <span>LEFT HAND</span><span>RIGHT HAND</span>
-        </div>
-        <div id="string-map" class="string-map" aria-label="Kora string map"></div>
-        <div class="map-footnote">
-          <span>Each numbered circle is one string.</span>
-          <span>Octaves follow the ascending tuning assumption: left string 1 = F1, right string 1 = F2.</span>
+          <div class="hands-labels" aria-hidden="true">
+            <span>LEFT HAND</span><span>RIGHT HAND</span>
+          </div>
+          <div id="string-map" class="string-map" aria-label="Kora string map"></div>
+          <div class="map-footnote">
+            <span>Each numbered circle is one string.</span>
+            <span>Octaves follow the ascending tuning assumption: left string 1 = F1, right string 1 = F2.</span>
+          </div>
         </div>
       </section>
 

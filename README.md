@@ -6,6 +6,7 @@ A standalone browser app for practicing Kora parts from MIDI files. Open `index.
 
 - Play/pause and stop.
 - Seek through the piece and choose a playback speed from 0.5× to 1.5×.
+- Toggle the string map fullscreen while playback continues.
 - Hear a lightweight, plucked-string-style Web Audio synthesis synchronized with the map.
 - Strings light up for the duration of their MIDI notes; shortly upcoming notes get a subtle preview.
 - Notes without a matching string are listed instead of being silently assigned to the wrong string.

@@ -38,6 +38,8 @@ const elements = {
   dropZone: document.querySelector("#drop-zone"),
   fileName: document.querySelector("#file-name"),
   loadExample: document.querySelector("#load-example"),
+  mapView: document.querySelector("#map-view"),
+  fullscreenToggle: document.querySelector("#fullscreen-toggle"),
   songName: document.querySelector("#song-name"),
   playState: document.querySelector("#play-state"),
   seek: document.querySelector("#seek"),
@@ -543,6 +545,26 @@ function loadExample() {
 
 elements.fileInput.addEventListener("change", () => loadFile(elements.fileInput.files[0]));
 elements.loadExample.addEventListener("click", loadExample);
+elements.fullscreenToggle.addEventListener("click", async () => {
+  try {
+    if (document.fullscreenElement === elements.mapView) {
+      await document.exitFullscreen();
+    } else if (!document.fullscreenElement) {
+      await elements.mapView.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+      await elements.mapView.requestFullscreen();
+    }
+  } catch (error) {
+    showFeedback(error instanceof Error ? `Fullscreen could not be changed: ${error.message}` : "Fullscreen could not be changed.", true);
+  }
+});
+document.addEventListener("fullscreenchange", () => {
+  const isFullscreen = document.fullscreenElement === elements.mapView;
+  elements.fullscreenToggle.setAttribute("aria-pressed", String(isFullscreen));
+  elements.fullscreenToggle.setAttribute("aria-label", isFullscreen ? "Exit fullscreen" : "Enter fullscreen");
+  elements.fullscreenToggle.querySelector("span").textContent = isFullscreen ? "Exit fullscreen" : "Fullscreen";
+});
 elements.dropZone.addEventListener("click", () => elements.fileInput.click());
 elements.dropZone.addEventListener("keydown", (event) => {
   if (event.key === "Enter" || event.key === " ") {
