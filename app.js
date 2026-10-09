@@ -30,6 +30,7 @@ const RIGHT_STRINGS = [
 const MIDI_NOTES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 const GREENSLEEVES_MIDI = window.GREENSLEEVES_MIDI;
 const F_MAJOR_SCALE_MIDI = window.F_MAJOR_SCALE_MIDI;
+const F_MAJOR_PENTATONIC_MIDI = window.F_MAJOR_PENTATONIC_MIDI;
 const byMidi = new Map();
 for (const string of LEFT_STRINGS) byMidi.set(string.midi, { ...string, side: "left" });
 for (const string of RIGHT_STRINGS) byMidi.set(string.midi, { ...string, side: "right" });
@@ -39,6 +40,7 @@ const elements = {
   dropZone: document.querySelector("#drop-zone"),
   fileName: document.querySelector("#file-name"),
   loadFMajorScale: document.querySelector("#load-f-major-scale"),
+  loadFMajorPentatonic: document.querySelector("#load-f-major-pentatonic"),
   loadGreensleeves: document.querySelector("#load-greensleeves"),
   mapView: document.querySelector("#map-view"),
   mapSongName: document.querySelector("#map-song-name"),
@@ -590,14 +592,26 @@ function loadFMajorScale() {
     const binary = atob(F_MAJOR_SCALE_MIDI);
     const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
     const parsed = parseMidi(bytes.buffer);
-    setSong(parsed, "F major scale - F1", `Scale sample · ${parsed.trackCount} track`);
+    setSong(parsed, "F major scale", `Scale sample · ${parsed.trackCount} track`);
   } catch (error) {
     showFeedback(error instanceof Error ? error.message : "The F major scale MIDI could not be loaded.", true);
   }
 }
 
+function loadFMajorPentatonic() {
+  try {
+    const binary = atob(F_MAJOR_PENTATONIC_MIDI);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const parsed = parseMidi(bytes.buffer);
+    setSong(parsed, "F major pentatonic", `Pentatonic scale sample · ${parsed.trackCount} track`);
+  } catch (error) {
+    showFeedback(error instanceof Error ? error.message : "The F major pentatonic MIDI could not be loaded.", true);
+  }
+}
+
 elements.fileInput.addEventListener("change", () => loadFile(elements.fileInput.files[0]));
 elements.loadFMajorScale.addEventListener("click", loadFMajorScale);
+elements.loadFMajorPentatonic.addEventListener("click", loadFMajorPentatonic);
 elements.loadGreensleeves.addEventListener("click", loadGreensleeves);
 elements.stringMap.addEventListener("click", (event) => {
   const slot = event.target.closest(".string-slot");

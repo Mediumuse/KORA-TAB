@@ -30,9 +30,11 @@
             <span>Choose a MIDI file</span>
           </label>
           <input id="midi-file" type="file" accept=".mid,.midi,audio/midi,audio/x-midi">
-          <button id="load-f-major-scale" class="example-button" type="button">F major scale - F1</button>
+          <button id="load-f-major-scale" class="example-button" type="button">F major scale</button>
+          <button id="load-f-major-pentatonic" class="example-button" type="button">F major pentatonic</button>
           <button id="load-greensleeves" class="example-button" type="button">Greensleeves - D minor</button>
-          <a class="download-link" href="f-major-scale-F1.mid" download="f-major-scale-F1.mid">Download F major scale MIDI</a>
+          <a class="download-link" href="f-major-scale.mid" download="f-major-scale.mid">Download F major scale MIDI</a>
+          <a class="download-link" href="f-major-pentatonic.mid" download="f-major-pentatonic.mid">Download F major pentatonic MIDI</a>
           <a class="download-link" href="greensleeves-Dm-kora.mid" download="Greensleeves - D minor.mid">Download Greensleeves - D minor MIDI</a>
           <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Choose or drop a MIDI file">
             <span id="file-name">or drop a .mid file here</span>
@@ -145,6 +147,7 @@
     </main>
     <script src="greensleeves-sample.js" defer></script>
     <script src="f-major-scale-sample.js" defer></script>
+    <script src="f-major-pentatonic-sample.js" defer></script>
     <script src="app.js" defer></script>
   </body>
 </html>
