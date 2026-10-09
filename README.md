@@ -11,7 +11,6 @@ A standalone browser app for practicing Kora parts from MIDI files. Open `index.
 - Strings light up for the duration of their MIDI notes; shortly upcoming notes get a subtle preview.
 - Notes without a matching string are listed instead of being silently assigned to the wrong string.
 - Load the built-in public-domain “Frère Jacques” demo in F major, or download its MIDI file from `frere-jacques-f.mid`.
-- Try the low-register “Greensleeves” in D minor from `greensleeves-Dm.mid`.
 
 ## MIDI and tuning
 
