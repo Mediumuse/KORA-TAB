@@ -28,6 +28,7 @@ const RIGHT_STRINGS = [
 ];
 
 const MIDI_NOTES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+const GREENSLEEVES_MIDI = window.GREENSLEEVES_MIDI;
 const EXAMPLE_MIDI = "TVRoZAAAAAYAAAABAeBNVHJrAAABQQD/AxJGcmVyZSBKYWNxdWVzIGluIEYA/1EDB6EgAJA1WIMwgDUAMJA3WIMwgDcAMJA5WIMwgDkAMJA1WIMwgDUAMJA1WIMwgDUAMJA3WIMwgDcAMJA5WIMwgDkAMJA1WIMwgDUAMJA5WIMwgDkAMJA6WIMwgDoAMJA8WIMwgDwAMJA5WIMwgDkAMJA6WIMwgDoAMJA8WIMwgDwAMJA8WIMwgDwAMJA+WIMwgD4AMJA8WIMwgDwAMJA6WIMwgDoAMJA5WIMwgDkAMJA1WIMwgDUAMJA8WIMwgDwAMJA+WIMwgD4AMJA8WIMwgDwAMJA6WIMwgDoAMJA5WIMwgDkAMJA1WIMwgDUAMJA1WIMwgDUAMJAwWIMwgDAAMJA1WIMwgDUAMJA1WIMwgDUAMJAwWIMwgDAAMJA1WIMwgDUAAP8vAA==";
 const byMidi = new Map();
 for (const string of LEFT_STRINGS) byMidi.set(string.midi, { ...string, side: "left" });
@@ -38,6 +39,7 @@ const elements = {
   dropZone: document.querySelector("#drop-zone"),
   fileName: document.querySelector("#file-name"),
   loadExample: document.querySelector("#load-example"),
+  loadGreensleeves: document.querySelector("#load-greensleeves"),
   mapView: document.querySelector("#map-view"),
   fullscreenToggle: document.querySelector("#fullscreen-toggle"),
   songName: document.querySelector("#song-name"),
@@ -78,15 +80,19 @@ function addStringCell(parent, string, side) {
   cell.dataset.midi = String(string.midi);
   const label = document.createElement("span");
   label.className = "string-label";
-  label.textContent = string.note;
+  const note = document.createElement("span");
+  note.className = "string-note";
+  note.textContent = string.note;
   const number = document.createElement("span");
   number.className = "string-number";
   number.textContent = String(string.number);
-  label.append(number);
+  label.append(note);
+  cell.append(number);
   const slot = document.createElement("span");
   slot.className = "string-slot";
   slot.setAttribute("aria-label", `${side} hand, string ${string.number}, ${noteName(string.midi)}`);
-  cell.append(label, slot);
+  if (side === "left") cell.append(label, slot);
+  else cell.append(slot, label);
   parent.append(cell);
 }
 
@@ -543,8 +549,20 @@ function loadExample() {
   }
 }
 
+function loadGreensleeves() {
+  try {
+    const binary = atob(GREENSLEEVES_MIDI);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const parsed = parseMidi(bytes.buffer);
+    setSong(parsed, "Greensleeves in D minor · A1 raised to A2", `Kora-fit sample · ${parsed.trackCount} tracks`);
+  } catch (error) {
+    showFeedback(error instanceof Error ? error.message : "The Greensleeves MIDI could not be loaded.", true);
+  }
+}
+
 elements.fileInput.addEventListener("change", () => loadFile(elements.fileInput.files[0]));
 elements.loadExample.addEventListener("click", loadExample);
+elements.loadGreensleeves.addEventListener("click", loadGreensleeves);
 elements.fullscreenToggle.addEventListener("click", async () => {
   try {
     if (document.fullscreenElement === elements.mapView) {

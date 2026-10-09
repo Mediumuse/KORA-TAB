@@ -11,11 +11,15 @@ A standalone browser app for practicing Kora parts from MIDI files. Open `index.
 - Strings light up for the duration of their MIDI notes; shortly upcoming notes get a subtle preview.
 - Notes without a matching string are listed instead of being silently assigned to the wrong string.
 - Load the built-in public-domain “Frère Jacques” demo in F major, or download its MIDI file from `frere-jacques-f.mid`.
+- Load the Kora-fit multi-track “Greensleeves” in D minor with **Try Greensleeves (A1 raised to A2)**, or download `greensleeves-Dm-kora.mid`.
+- Load “Greensleeves” in D minor from the included `greensleeves-Dm.mid` sample.
 
 ## MIDI and tuning
 
 The parser supports Standard MIDI File format 0 and 1, including multiple tracks and tempo changes. Format 2 and SMPTE time-division files are not supported.
 
 The included 32-note “Frère Jacques” melody is supplied as [frere-jacques-f.mid](./frere-jacques-f.mid). Use **Try Frère Jacques in F** to load it in the player, then press play to hear the synthesized notes and follow the map.
+
+The original Greensleeves MIDI is [greensleeves-Dm.mid](./greensleeves-Dm.mid). You can upload it to the player to see which pitches are outside the mapped strings. The playable Kora-fit copy is [greensleeves-Dm-kora.mid](./greensleeves-Dm-kora.mid); its A1 notes are raised to A2, and its data is loaded by [greensleeves-sample.js](./greensleeves-sample.js) so the sample works when `index.html` is opened directly from disk. B2, C♯3, and B3 remain out of range because shifting them by an octave does not match a Kora string.
 
 The string map uses the note names in `Kora tab string map.png`. Since the image does not specify octaves, the app uses the confirmed assumption that pitches ascend with string number on each side: left string 1 starts at F1, and right string 1 starts at F2. This assigns MIDI pitches F1, C2, D2, E2, G2, B♭2, D3, F3, A3, C4, E4 to the left strings 1–11, and F2, A2, C3, E3, G3, B♭3, D4, F4, G4, A4 to the right strings 1–10.
