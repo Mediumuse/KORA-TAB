@@ -29,7 +29,7 @@ const RIGHT_STRINGS = [
 
 const MIDI_NOTES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 const GREENSLEEVES_MIDI = window.GREENSLEEVES_MIDI;
-const EXAMPLE_MIDI = "TVRoZAAAAAYAAAABAeBNVHJrAAABQQD/AxJGcmVyZSBKYWNxdWVzIGluIEYA/1EDB6EgAJA1WIMwgDUAMJA3WIMwgDcAMJA5WIMwgDkAMJA1WIMwgDUAMJA1WIMwgDUAMJA3WIMwgDcAMJA5WIMwgDkAMJA1WIMwgDUAMJA5WIMwgDkAMJA6WIMwgDoAMJA8WIMwgDwAMJA5WIMwgDkAMJA6WIMwgDoAMJA8WIMwgDwAMJA8WIMwgDwAMJA+WIMwgD4AMJA8WIMwgDwAMJA6WIMwgDoAMJA5WIMwgDkAMJA1WIMwgDUAMJA8WIMwgDwAMJA+WIMwgD4AMJA8WIMwgDwAMJA6WIMwgDoAMJA5WIMwgDkAMJA1WIMwgDUAMJA1WIMwgDUAMJAwWIMwgDAAMJA1WIMwgDUAMJA1WIMwgDUAMJAwWIMwgDAAMJA1WIMwgDUAAP8vAA==";
+const F_MAJOR_SCALE_MIDI = window.F_MAJOR_SCALE_MIDI;
 const byMidi = new Map();
 for (const string of LEFT_STRINGS) byMidi.set(string.midi, { ...string, side: "left" });
 for (const string of RIGHT_STRINGS) byMidi.set(string.midi, { ...string, side: "right" });
@@ -38,9 +38,18 @@ const elements = {
   fileInput: document.querySelector("#midi-file"),
   dropZone: document.querySelector("#drop-zone"),
   fileName: document.querySelector("#file-name"),
-  loadExample: document.querySelector("#load-example"),
+  loadFMajorScale: document.querySelector("#load-f-major-scale"),
   loadGreensleeves: document.querySelector("#load-greensleeves"),
   mapView: document.querySelector("#map-view"),
+  mapSongName: document.querySelector("#map-song-name"),
+  mapCurrentTime: document.querySelector("#map-current-time"),
+  mapTotalTime: document.querySelector("#map-total-time"),
+  mapSeek: document.querySelector("#map-seek"),
+  mapStop: document.querySelector("#map-stop"),
+  mapPlayPause: document.querySelector("#map-play-pause"),
+  mapPlayIcon: document.querySelector("#map-play-icon"),
+  mapPlayLabel: document.querySelector("#map-play-label"),
+  mapSpeed: document.querySelector("#map-speed"),
   fullscreenToggle: document.querySelector("#fullscreen-toggle"),
   songName: document.querySelector("#song-name"),
   playState: document.querySelector("#play-state"),
@@ -88,8 +97,9 @@ function addStringCell(parent, string, side) {
   number.textContent = String(string.number);
   label.append(note);
   cell.append(number);
-  const slot = document.createElement("span");
+  const slot = document.createElement("button");
   slot.className = "string-slot";
+  slot.type = "button";
   slot.setAttribute("aria-label", `${side} hand, string ${string.number}, ${noteName(string.midi)}`);
   if (side === "left") cell.append(label, slot);
   else cell.append(slot, label);
@@ -315,6 +325,18 @@ function updateTransport() {
   elements.playLabel.textContent = playing ? "Pause" : (position >= (song?.duration || 0) && song ? "Play again" : "Play along");
   elements.playIcon.classList.toggle("pause", playing);
   elements.playPause.setAttribute("aria-label", playing ? "Pause" : "Play");
+  elements.mapSongName.textContent = elements.songName.textContent;
+  elements.mapCurrentTime.textContent = formatTime(position);
+  elements.mapTotalTime.textContent = song ? formatTime(song.duration) : "0:00";
+  if (!seeking && song) elements.mapSeek.value = elements.seek.value;
+  elements.mapSeek.disabled = !song;
+  elements.mapSeek.style.setProperty("--progress", `${percent}%`);
+  elements.mapStop.disabled = !song;
+  elements.mapPlayPause.disabled = !song;
+  elements.mapPlayIcon.classList.toggle("pause", playing);
+  elements.mapPlayLabel.textContent = playing ? "Pause" : (position >= (song?.duration || 0) && song ? "Replay" : "Play");
+  elements.mapPlayPause.setAttribute("aria-label", playing ? "Pause" : (position >= (song?.duration || 0) && song ? "Play again" : "Play"));
+  elements.mapSpeed.value = elements.speed.value;
 }
 
 function updateHighlights() {
@@ -403,6 +425,20 @@ function scheduleNote(note, startTime, duration) {
     source.addEventListener("ended", () => activeSources.delete(source), { once: true });
     source.start(startTime);
     source.stop(startTime + duration + 0.025);
+  }
+}
+
+async function auditionString(midi) {
+  try {
+    if (!audioContext) {
+      const AudioContextType = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextType) throw new Error("This browser does not support synthesized audio playback.");
+      audioContext = new AudioContextType();
+    }
+    await audioContext.resume();
+    scheduleNote({ note: midi, velocity: 96 }, audioContext.currentTime, 0.65);
+  } catch (error) {
+    showFeedback(error instanceof Error ? error.message : "The string note could not be played.", true);
   }
 }
 
@@ -538,31 +574,37 @@ function setSong(parsed, title, description) {
   }
 }
 
-function loadExample() {
-  try {
-    const binary = atob(EXAMPLE_MIDI);
-    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-    const parsed = parseMidi(bytes.buffer);
-    setSong(parsed, "Frère Jacques in F", `Public-domain sample · ${parsed.trackCount} track`);
-  } catch (error) {
-    showFeedback(error instanceof Error ? error.message : "The sample MIDI could not be loaded.", true);
-  }
-}
-
 function loadGreensleeves() {
   try {
     const binary = atob(GREENSLEEVES_MIDI);
     const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
     const parsed = parseMidi(bytes.buffer);
-    setSong(parsed, "Greensleeves in D minor · A1 raised to A2", `Kora-fit sample · ${parsed.trackCount} tracks`);
+    setSong(parsed, "Greensleeves - D minor", `Kora-fit sample · ${parsed.trackCount} tracks`);
   } catch (error) {
     showFeedback(error instanceof Error ? error.message : "The Greensleeves MIDI could not be loaded.", true);
   }
 }
 
+function loadFMajorScale() {
+  try {
+    const binary = atob(F_MAJOR_SCALE_MIDI);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const parsed = parseMidi(bytes.buffer);
+    setSong(parsed, "F major scale - F1", `Scale sample · ${parsed.trackCount} track`);
+  } catch (error) {
+    showFeedback(error instanceof Error ? error.message : "The F major scale MIDI could not be loaded.", true);
+  }
+}
+
 elements.fileInput.addEventListener("change", () => loadFile(elements.fileInput.files[0]));
-elements.loadExample.addEventListener("click", loadExample);
+elements.loadFMajorScale.addEventListener("click", loadFMajorScale);
 elements.loadGreensleeves.addEventListener("click", loadGreensleeves);
+elements.stringMap.addEventListener("click", (event) => {
+  const slot = event.target.closest(".string-slot");
+  if (!slot) return;
+  const cell = slot.closest(".string-cell");
+  if (cell) void auditionString(Number(cell.dataset.midi));
+});
 elements.fullscreenToggle.addEventListener("click", async () => {
   try {
     if (document.fullscreenElement === elements.mapView) {
@@ -606,6 +648,17 @@ elements.playPause.addEventListener("click", () => {
   else startPlayback();
 });
 elements.stop.addEventListener("click", stopPlayback);
+elements.mapPlayPause.addEventListener("click", () => elements.playPause.click());
+elements.mapStop.addEventListener("click", () => elements.stop.click());
+elements.mapSeek.addEventListener("input", () => {
+  elements.seek.value = elements.mapSeek.value;
+  elements.seek.dispatchEvent(new Event("input", { bubbles: true }));
+  elements.mapCurrentTime.textContent = elements.currentTime.textContent;
+  elements.mapSeek.style.setProperty("--progress", `${elements.mapSeek.value / 10}%`);
+});
+elements.mapSeek.addEventListener("change", () => {
+  elements.seek.dispatchEvent(new Event("change", { bubbles: true }));
+});
 elements.seek.addEventListener("input", () => {
   if (!song) return;
   if (!seeking && playing) {
@@ -617,6 +670,8 @@ elements.seek.addEventListener("input", () => {
   position = (Number(elements.seek.value) / 1000) * song.duration;
   elements.currentTime.textContent = formatTime(position);
   elements.seek.style.setProperty("--progress", `${elements.seek.value / 10}%`);
+  elements.mapCurrentTime.textContent = elements.currentTime.textContent;
+  elements.mapSeek.style.setProperty("--progress", `${elements.seek.value / 10}%`);
   updateHighlights();
 });
 elements.seek.addEventListener("change", () => {
@@ -628,16 +683,21 @@ elements.seek.addEventListener("change", () => {
   updateTransport();
   updateHighlights();
 });
-elements.speed.addEventListener("change", () => {
+function updatePlaybackSpeed(speed) {
+  const previousSpeed = Number(elements.speed.dataset.previous || "1");
   if (playing) {
-    position = Math.min(song.duration, positionAtStart + ((performance.now() - startedAt) / 1000) * Number(elements.speed.dataset.previous || "1"));
+    position = Math.min(song.duration, positionAtStart + ((performance.now() - startedAt) / 1000) * previousSpeed);
     positionAtStart = position;
     startedAt = performance.now();
     audioStartedAt = audioContext.currentTime;
     beginAudioScheduling();
   }
-  elements.speed.dataset.previous = elements.speed.value;
-});
+  elements.speed.value = speed;
+  elements.mapSpeed.value = speed;
+  elements.speed.dataset.previous = speed;
+}
+elements.speed.addEventListener("change", () => updatePlaybackSpeed(elements.speed.value));
+elements.mapSpeed.addEventListener("change", () => updatePlaybackSpeed(elements.mapSpeed.value));
 
 elements.seek.disabled = true;
 elements.stop.disabled = true;

@@ -10,19 +10,21 @@ The repository includes a GitHub Actions workflow that deploys the site whenever
 
 - Play/pause and stop.
 - Seek through the piece and choose a playback speed from 0.5× to 1.5×.
+- Use the compact playback bar at the bottom of the Kora Map to control playback, seek, and change speed without leaving the map.
+- Press any string circle on the map to audition its tuned note.
 - Toggle the string map fullscreen while playback continues.
 - Hear a lightweight, plucked-string-style Web Audio synthesis synchronized with the map.
 - Strings light up for the duration of their MIDI notes; shortly upcoming notes get a subtle preview.
 - Notes without a matching string are listed instead of being silently assigned to the wrong string.
-- Load the built-in public-domain “Frère Jacques” demo in F major, or download its MIDI file from `frere-jacques-f.mid`.
-- Load the Kora-fit multi-track “Greensleeves” in D minor with **Try Greensleeves (A1 raised to A2)**, or download `greensleeves-Dm-kora.mid`.
+- Load the Kora-fit multi-track “Greensleeves - D minor” demo, or download `greensleeves-Dm-kora.mid`.
+- Load the ascending F-major scale sample starting at F1, or download `f-major-scale-F1.mid`.
 - Load “Greensleeves” in D minor from the included `greensleeves-Dm.mid` sample.
 
 ## MIDI and tuning
 
 The parser supports Standard MIDI File format 0 and 1, including multiple tracks and tempo changes. Format 2 and SMPTE time-division files are not supported.
 
-The included 32-note “Frère Jacques” melody is supplied as [frere-jacques-f.mid](./frere-jacques-f.mid). Use **Try Frère Jacques in F** to load it in the player, then press play to hear the synthesized notes and follow the map.
+The included [F major scale MIDI](./f-major-scale-F1.mid) plays one ascending octave from F1 to F2 at 120 BPM. The app loads the same sample from [f-major-scale-sample.js](./f-major-scale-sample.js) when opened directly from disk.
 
 The original Greensleeves MIDI is [greensleeves-Dm.mid](./greensleeves-Dm.mid). You can upload it to the player to see which pitches are outside the mapped strings. The playable Kora-fit copy is [greensleeves-Dm-kora.mid](./greensleeves-Dm-kora.mid); its A1 notes are raised to A2, and its data is loaded by [greensleeves-sample.js](./greensleeves-sample.js) so the sample works when `index.html` is opened directly from disk. B2, C♯3, and B3 remain out of range because shifting them by an octave does not match a Kora string.
 
