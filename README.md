@@ -1,6 +1,6 @@
 # Kora String Map
 
-A standalone browser app for practicing Kora parts from MIDI files. Open `index.html` in a modern browser, choose or drop a `.mid`/`.midi` file, then use the transport controls to follow the highlighted strings and hear synthesized playback.
+A standalone browser app for practicing Kora parts from MIDI files. Open `index.html` in a modern browser, choose or drop a `.mid`/`.midi` file, then use the player below the Kora Map to follow the highlighted strings and hear synthesized playback.
 
 ## Hosting on GitHub Pages
 
@@ -10,7 +10,7 @@ The repository includes a GitHub Actions workflow that deploys the site whenever
 
 - Play/pause and stop.
 - Seek through the piece and choose a playback speed from 0.5× to 1.5×.
-- Use the compact playback bar at the bottom of the Kora Map to control playback, seek, and change speed without leaving the map.
+- Use the playback bar at the bottom of the Kora Map to play/pause, stop, seek, and change speed.
 - Press any string circle on the map to audition its tuned note.
 - Toggle the string map fullscreen while playback continues.
 - Hear a lightweight, plucked-string-style Web Audio synthesis synchronized with the map.

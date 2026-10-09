@@ -43,26 +43,16 @@ const elements = {
   loadFMajorPentatonic: document.querySelector("#load-f-major-pentatonic"),
   loadGreensleeves: document.querySelector("#load-greensleeves"),
   mapView: document.querySelector("#map-view"),
-  mapSongName: document.querySelector("#map-song-name"),
-  mapCurrentTime: document.querySelector("#map-current-time"),
-  mapTotalTime: document.querySelector("#map-total-time"),
-  mapSeek: document.querySelector("#map-seek"),
-  mapStop: document.querySelector("#map-stop"),
-  mapPlayPause: document.querySelector("#map-play-pause"),
-  mapPlayIcon: document.querySelector("#map-play-icon"),
-  mapPlayLabel: document.querySelector("#map-play-label"),
-  mapSpeed: document.querySelector("#map-speed"),
+  songName: document.querySelector("#map-song-name"),
+  currentTime: document.querySelector("#map-current-time"),
+  totalTime: document.querySelector("#map-total-time"),
+  seek: document.querySelector("#map-seek"),
+  stop: document.querySelector("#map-stop"),
+  playPause: document.querySelector("#map-play-pause"),
+  playIcon: document.querySelector("#map-play-icon"),
+  playLabel: document.querySelector("#map-play-label"),
+  speed: document.querySelector("#map-speed"),
   fullscreenToggle: document.querySelector("#fullscreen-toggle"),
-  songName: document.querySelector("#song-name"),
-  playState: document.querySelector("#play-state"),
-  seek: document.querySelector("#seek"),
-  currentTime: document.querySelector("#current-time"),
-  totalTime: document.querySelector("#total-time"),
-  stop: document.querySelector("#stop"),
-  playPause: document.querySelector("#play-pause"),
-  playIcon: document.querySelector("#play-icon"),
-  playLabel: document.querySelector("#play-label"),
-  speed: document.querySelector("#speed"),
   feedback: document.querySelector("#feedback"),
   stringMap: document.querySelector("#string-map"),
   unmappedPanel: document.querySelector("#unmapped-panel"),
@@ -322,23 +312,13 @@ function updateTransport() {
   if (!seeking && song) elements.seek.value = String(Math.round((position / song.duration) * 1000));
   const percent = song ? (position / song.duration) * 100 : 0;
   elements.seek.style.setProperty("--progress", `${percent}%`);
-  elements.playState.textContent = playing ? "PLAYING" : (song && position >= song.duration ? "FINISHED" : (hasStarted ? "PAUSED" : "READY"));
-  elements.playState.classList.toggle("playing", playing);
-  elements.playLabel.textContent = playing ? "Pause" : (position >= (song?.duration || 0) && song ? "Play again" : "Play along");
+  elements.playLabel.textContent = playing ? "Pause" : (position >= (song?.duration || 0) && song ? "Replay" : "Play");
   elements.playIcon.classList.toggle("pause", playing);
   elements.playPause.setAttribute("aria-label", playing ? "Pause" : "Play");
-  elements.mapSongName.textContent = elements.songName.textContent;
-  elements.mapCurrentTime.textContent = formatTime(position);
-  elements.mapTotalTime.textContent = song ? formatTime(song.duration) : "0:00";
-  if (!seeking && song) elements.mapSeek.value = elements.seek.value;
-  elements.mapSeek.disabled = !song;
-  elements.mapSeek.style.setProperty("--progress", `${percent}%`);
-  elements.mapStop.disabled = !song;
-  elements.mapPlayPause.disabled = !song;
-  elements.mapPlayIcon.classList.toggle("pause", playing);
-  elements.mapPlayLabel.textContent = playing ? "Pause" : (position >= (song?.duration || 0) && song ? "Replay" : "Play");
-  elements.mapPlayPause.setAttribute("aria-label", playing ? "Pause" : (position >= (song?.duration || 0) && song ? "Play again" : "Play"));
-  elements.mapSpeed.value = elements.speed.value;
+  elements.totalTime.textContent = song ? formatTime(song.duration) : "0:00";
+  elements.seek.disabled = !song;
+  elements.stop.disabled = !song;
+  elements.playPause.disabled = !song;
 }
 
 function updateHighlights() {
@@ -542,10 +522,10 @@ async function loadFile(file) {
     hasStarted = false;
     elements.songName.textContent = "No MIDI loaded";
     elements.fileName.textContent = "or drop a .mid file here";
-    elements.totalTime.textContent = "0:00";
+    elements.seek.value = "0";
     elements.seek.disabled = true;
-    elements.playPause.disabled = true;
     elements.stop.disabled = true;
+    elements.playPause.disabled = true;
     elements.unmappedPanel.hidden = true;
     updateTransport();
     updateHighlights();
@@ -561,9 +541,6 @@ function setSong(parsed, title, description) {
   elements.songName.textContent = title;
   elements.fileName.textContent = description;
   elements.totalTime.textContent = formatTime(parsed.duration);
-  elements.seek.disabled = false;
-  elements.playPause.disabled = false;
-  elements.stop.disabled = false;
   renderUnmappedNotes();
   updateTransport();
   updateHighlights();
@@ -662,30 +639,19 @@ elements.playPause.addEventListener("click", () => {
   else startPlayback();
 });
 elements.stop.addEventListener("click", stopPlayback);
-elements.mapPlayPause.addEventListener("click", () => elements.playPause.click());
-elements.mapStop.addEventListener("click", () => elements.stop.click());
-elements.mapSeek.addEventListener("input", () => {
-  elements.seek.value = elements.mapSeek.value;
-  elements.seek.dispatchEvent(new Event("input", { bubbles: true }));
-  elements.mapCurrentTime.textContent = elements.currentTime.textContent;
-  elements.mapSeek.style.setProperty("--progress", `${elements.mapSeek.value / 10}%`);
-});
-elements.mapSeek.addEventListener("change", () => {
-  elements.seek.dispatchEvent(new Event("change", { bubbles: true }));
-});
 elements.seek.addEventListener("input", () => {
   if (!song) return;
+  const seekValue = elements.seek.value;
   if (!seeking && playing) {
     resumeAfterSeek = true;
     pausePlayback();
+    elements.seek.value = seekValue;
   }
   hasStarted = true;
   seeking = true;
   position = (Number(elements.seek.value) / 1000) * song.duration;
   elements.currentTime.textContent = formatTime(position);
   elements.seek.style.setProperty("--progress", `${elements.seek.value / 10}%`);
-  elements.mapCurrentTime.textContent = elements.currentTime.textContent;
-  elements.mapSeek.style.setProperty("--progress", `${elements.seek.value / 10}%`);
   updateHighlights();
 });
 elements.seek.addEventListener("change", () => {
@@ -699,6 +665,7 @@ elements.seek.addEventListener("change", () => {
 });
 function updatePlaybackSpeed(speed) {
   const previousSpeed = Number(elements.speed.dataset.previous || "1");
+  elements.speed.dataset.previous = speed;
   if (playing) {
     position = Math.min(song.duration, positionAtStart + ((performance.now() - startedAt) / 1000) * previousSpeed);
     positionAtStart = position;
@@ -706,15 +673,12 @@ function updatePlaybackSpeed(speed) {
     audioStartedAt = audioContext.currentTime;
     beginAudioScheduling();
   }
-  elements.speed.value = speed;
-  elements.mapSpeed.value = speed;
-  elements.speed.dataset.previous = speed;
 }
 elements.speed.addEventListener("change", () => updatePlaybackSpeed(elements.speed.value));
-elements.mapSpeed.addEventListener("change", () => updatePlaybackSpeed(elements.mapSpeed.value));
 
 elements.seek.disabled = true;
 elements.stop.disabled = true;
+elements.playPause.disabled = true;
 renderMap();
 updateTransport();
 updateHighlights();
