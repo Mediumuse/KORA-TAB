@@ -462,7 +462,7 @@ function renderNotation(groups, groupIndex) {
       if (stemUp) return note.y > selected.y ? note : selected;
       return note.y < selected.y ? note : selected;
     });
-    const stemX = anchor.x + (stemUp ? 6 : -6);
+    const stemX = anchor.x + (stemUp ? 3 : -3);
     const stemEndY = anchor.y + (stemUp ? -26 : 26);
     addSvgElement("line", {
       x1: stemX,
@@ -574,7 +574,7 @@ function renderNoteSequence(force = false) {
   elements.sequencePrevious.disabled = currentIndex === 0;
   elements.sequenceNext.disabled = currentIndex === song.groups.length - 1;
   const activeCard = elements.sequenceCards.querySelector(".is-current");
-  if (activeCard) {
+  if (activeCard && !elements.sequenceCards.classList.contains("is-dragging")) {
     const cardRect = activeCard.getBoundingClientRect();
     const listRect = elements.sequenceCards.getBoundingClientRect();
     const target = elements.sequenceCards.scrollLeft + cardRect.left - listRect.left
@@ -1018,7 +1018,7 @@ elements.sequenceCards.addEventListener("pointerdown", (event) => {
   sequenceDrag = {
     pointerId: event.pointerId,
     startX: event.clientX,
-    startScrollLeft: elements.sequenceCards.scrollLeft,
+    startPosition: position,
     moved: false
   };
 });
@@ -1026,9 +1026,23 @@ window.addEventListener("pointermove", (event) => {
   if (!sequenceDrag || sequenceDrag.pointerId !== event.pointerId) return;
   const delta = event.clientX - sequenceDrag.startX;
   if (!sequenceDrag.moved && Math.abs(delta) < 5) return;
-  sequenceDrag.moved = true;
-  elements.sequenceCards.classList.add("is-dragging");
-  elements.sequenceCards.scrollLeft = sequenceDrag.startScrollLeft - delta;
+  if (!sequenceDrag.moved) {
+    sequenceDrag.moved = true;
+    elements.sequenceCards.classList.add("is-dragging");
+    if (playing) {
+      resumeAfterSeek = true;
+      pausePlayback();
+    }
+  }
+  if (!song) return;
+  const scrubRange = Math.max(1, elements.sequenceCards.clientWidth);
+  position = Math.max(0, Math.min(song.duration, sequenceDrag.startPosition - (delta / scrubRange) * song.duration));
+  hasStarted = true;
+  seeking = true;
+  elements.seek.value = String(Math.round((position / song.duration) * 1000));
+  elements.seek.style.setProperty("--progress", `${(position / song.duration) * 100}%`);
+  updateTransport();
+  updateHighlights();
   event.preventDefault();
 });
 window.addEventListener("pointerup", (event) => {
@@ -1039,24 +1053,28 @@ window.addEventListener("pointerup", (event) => {
   if (!wasDragged) return;
 
   suppressSequenceClick = true;
-  const center = elements.sequenceCards.getBoundingClientRect().left + elements.sequenceCards.clientWidth / 2;
-  let closestCard = null;
-  let closestDistance = Infinity;
-  for (const card of elements.sequenceCards.querySelectorAll(".sequence-card")) {
-    const rect = card.getBoundingClientRect();
-    const distance = Math.abs(rect.left + rect.width / 2 - center);
-    if (distance < closestDistance) {
-      closestCard = card;
-      closestDistance = distance;
-    }
+  seeking = false;
+  if (resumeAfterSeek) {
+    resumeAfterSeek = false;
+    void startPlayback();
   }
-  if (closestCard) seekToGroup(Number(closestCard.dataset.groupIndex));
+  updateTransport();
+  updateHighlights();
   window.setTimeout(() => { suppressSequenceClick = false; }, 0);
 });
 window.addEventListener("pointercancel", (event) => {
   if (!sequenceDrag || sequenceDrag.pointerId !== event.pointerId) return;
+  const wasDragged = sequenceDrag.moved;
   sequenceDrag = null;
   elements.sequenceCards.classList.remove("is-dragging");
+  if (!wasDragged) return;
+  seeking = false;
+  if (resumeAfterSeek) {
+    resumeAfterSeek = false;
+    void startPlayback();
+  }
+  updateTransport();
+  updateHighlights();
 });
 elements.sequenceCards.addEventListener("click", (event) => {
   if (!suppressSequenceClick) return;

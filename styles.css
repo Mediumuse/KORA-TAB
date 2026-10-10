@@ -185,7 +185,7 @@ input[type="range"]::-moz-range-thumb { width: 10px; height: 10px; border: 2px s
 .sequence-arrow { display: grid; width: 36px; height: 30px; padding: 0; place-items: center; border: 0; border-radius: 0; background: transparent; color: var(--green-dark); cursor: pointer; font-size: 24px; font-weight: 700; line-height: 1; }
 .sequence-arrow:hover:not(:disabled) { color: var(--green); }
 .sequence-arrow:disabled { cursor: not-allowed; opacity: .4; }
-.sequence-cards { display: flex; align-items: center; justify-content: flex-start; gap: 6px; overflow-x: auto; padding: 2px 8px 14px; cursor: grab; scroll-snap-type: x mandatory; scrollbar-color: var(--line) transparent; scrollbar-width: thin; user-select: none; }
+.sequence-cards { display: flex; align-items: center; justify-content: flex-start; gap: 6px; overflow-x: auto; padding: 2px 8px 14px; cursor: ew-resize; scroll-snap-type: x mandatory; scrollbar-color: var(--line) transparent; scrollbar-width: thin; user-select: none; }
 .sequence-cards.is-dragging { cursor: grabbing; scroll-snap-type: none; }
 .sequence-cards.is-dragging .sequence-card { cursor: grabbing; }
 .sequence-card, .sequence-card-spacer { flex: 0 0 clamp(58px, 8vw, 76px); }
