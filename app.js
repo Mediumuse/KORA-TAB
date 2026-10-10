@@ -352,6 +352,12 @@ function formatNoteTime(seconds) {
   return `${Math.floor(wholeSeconds / 60)}:${String(wholeSeconds % 60).padStart(2, "0")}.${String(hundredths % 100).padStart(2, "0")}`;
 }
 
+function trebleStaffStep(midiNote) {
+  const octave = Math.floor(midiNote / 12) - 1;
+  const letter = "CDEFGAB".indexOf(MIDI_NOTES[midiNote % 12][0]);
+  return octave * 7 + letter;
+}
+
 function renderNotation(groups, groupIndex) {
   const svgNamespace = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(svgNamespace, "svg");
@@ -366,12 +372,13 @@ function renderNotation(groups, groupIndex) {
     const occupiedSteps = new Set();
     const displayNotes = notes.map((note) => {
       let displayMidi = note.note;
-      while (displayMidi < 64) displayMidi += 12;
-      let step = (Math.floor(displayMidi / 12) - 1) * 7
-        + "CDEFGAB".indexOf(MIDI_NOTES[note.note % 12][0]);
+      if (displayMidi < 64) {
+        displayMidi += Math.ceil((64 - displayMidi) / 12) * 12;
+      }
+      let step = trebleStaffStep(displayMidi);
       while (occupiedSteps.has(step)) {
         displayMidi += 12;
-        step += 7;
+        step = trebleStaffStep(displayMidi);
       }
       occupiedSteps.add(step);
       return { note, displayMidi, step };
@@ -391,7 +398,7 @@ function renderNotation(groups, groupIndex) {
   elements.notationBanner.style.height = `${Math.max(112, Math.ceil(viewHeight * 0.9))}px`;
   elements.notationBanner.setAttribute(
     "aria-label",
-    `Notation for the current group and up to three previous and upcoming groups, shown at higher octaves than played: ${groupLabels.join("; ")}`
+    `Notation for the current group and up to three previous and upcoming groups; lower notes are raised for display, and higher notes never move down an octave: ${groupLabels.join("; ")}`
   );
 
   const addSvgElement = (tag, attributes, text) => {
