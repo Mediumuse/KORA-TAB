@@ -39,7 +39,6 @@ for (const string of RIGHT_STRINGS) byMidi.set(string.midi, { ...string, side: "
 const elements = {
   fileInput: document.querySelector("#midi-file"),
   dropZone: document.querySelector("#drop-zone"),
-  fileName: document.querySelector("#file-name"),
   loadFMajorScale: document.querySelector("#load-f-major-scale"),
   loadFMajorPentatonic: document.querySelector("#load-f-major-pentatonic"),
   loadGreensleeves: document.querySelector("#load-greensleeves"),
@@ -825,13 +824,12 @@ async function loadFile(file) {
   try {
     const parsed = parseMidi(await file.arrayBuffer());
     addLoadedFileButton(file);
-    setSong(parsed, file.name.replace(/\.(mid|midi)$/i, ""), `${file.name} · ${parsed.trackCount} ${parsed.trackCount === 1 ? "track" : "tracks"}`);
+    setSong(parsed, file.name.replace(/\.(mid|midi)$/i, ""));
   } catch (error) {
     song = null;
     position = 0;
     hasStarted = false;
     elements.songName.textContent = "No MIDI loaded";
-    elements.fileName.textContent = "Drop a .mid or .midi file here";
     elements.seek.value = "0";
     elements.seek.disabled = true;
     elements.stop.disabled = true;
@@ -859,14 +857,13 @@ function addLoadedFileButton(file) {
   elements.loadedFiles.hidden = false;
 }
 
-function setSong(parsed, title, description) {
+function setSong(parsed, title) {
   pausePlayback();
   song = { ...parsed, groups: groupNotes(parsed.notes) };
   sequenceIndex = -1;
   position = 0;
   hasStarted = false;
   elements.songName.textContent = title;
-  elements.fileName.textContent = description;
   elements.totalTime.textContent = formatTime(parsed.duration);
   renderUnmappedNotes();
   updateTransport();
@@ -885,7 +882,7 @@ function loadGreensleeves() {
     const binary = atob(GREENSLEEVES_MIDI);
     const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
     const parsed = parseMidi(bytes.buffer);
-    setSong(parsed, "Greensleeves - D minor", `Kora-fit sample · ${parsed.trackCount} tracks`);
+    setSong(parsed, "Greensleeves - D minor");
   } catch (error) {
     showFeedback(error instanceof Error ? error.message : "The Greensleeves MIDI could not be loaded.", true);
   }
@@ -896,7 +893,7 @@ function loadFMajorScale() {
     const binary = atob(F_MAJOR_SCALE_MIDI);
     const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
     const parsed = parseMidi(bytes.buffer);
-    setSong(parsed, "F major scale", `Scale sample · ${parsed.trackCount} track`);
+    setSong(parsed, "F major scale");
   } catch (error) {
     showFeedback(error instanceof Error ? error.message : "The F major scale MIDI could not be loaded.", true);
   }
@@ -907,7 +904,7 @@ function loadFMajorPentatonic() {
     const binary = atob(F_MAJOR_PENTATONIC_MIDI);
     const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
     const parsed = parseMidi(bytes.buffer);
-    setSong(parsed, "F major pentatonic", `Pentatonic scale sample · ${parsed.trackCount} track`);
+    setSong(parsed, "F major pentatonic");
   } catch (error) {
     showFeedback(error instanceof Error ? error.message : "The F major pentatonic MIDI could not be loaded.", true);
   }
