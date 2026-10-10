@@ -31,6 +31,7 @@ const MIDI_NOTES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A"
 const GREENSLEEVES_MIDI = window.GREENSLEEVES_MIDI;
 const F_MAJOR_SCALE_MIDI = window.F_MAJOR_SCALE_MIDI;
 const F_MAJOR_PENTATONIC_MIDI = window.F_MAJOR_PENTATONIC_MIDI;
+const loadedMidiFiles = new Map();
 const byMidi = new Map();
 for (const string of LEFT_STRINGS) byMidi.set(string.midi, { ...string, side: "left" });
 for (const string of RIGHT_STRINGS) byMidi.set(string.midi, { ...string, side: "right" });
@@ -42,6 +43,7 @@ const elements = {
   loadFMajorScale: document.querySelector("#load-f-major-scale"),
   loadFMajorPentatonic: document.querySelector("#load-f-major-pentatonic"),
   loadGreensleeves: document.querySelector("#load-greensleeves"),
+  loadedFiles: document.querySelector("#loaded-files"),
   themeToggle: document.querySelector("#theme-toggle"),
   themeIcon: document.querySelector("#theme-icon"),
   themeColor: document.querySelector('meta[name="theme-color"]'),
@@ -58,6 +60,12 @@ const elements = {
   fullscreenToggle: document.querySelector("#fullscreen-toggle"),
   feedback: document.querySelector("#feedback"),
   stringMap: document.querySelector("#string-map"),
+  noteSequence: document.querySelector("#note-sequence"),
+  notationBanner: document.querySelector("#notation-banner"),
+  sequenceCards: document.querySelector("#sequence-cards"),
+  sequencePosition: document.querySelector("#sequence-position"),
+  sequencePrevious: document.querySelector("#sequence-previous"),
+  sequenceNext: document.querySelector("#sequence-next"),
   unmappedPanel: document.querySelector("#unmapped-panel"),
   unmappedCount: document.querySelector("#unmapped-count"),
   unmappedNotes: document.querySelector("#unmapped-notes")
@@ -69,12 +77,15 @@ function setTheme(isDark) {
   elements.themeToggle.setAttribute("aria-label", `Switch to ${isDark ? "light" : "dark"} mode`);
   elements.themeToggle.title = `Switch to ${isDark ? "light" : "dark"} mode`;
   elements.themeIcon.textContent = isDark ? "☀" : "☾";
-  elements.themeColor.content = isDark ? "#111827" : "#f4f2ec";
+  elements.themeColor.content = isDark ? "#111827" : "#f5f6f9";
 }
 
 setTheme(document.documentElement.dataset.theme === "dark");
 
 let song = null;
+let sequenceIndex = -1;
+let sequenceDrag = null;
+let suppressSequenceClick = false;
 let startedAt = 0;
 let positionAtStart = 0;
 let position = 0;
@@ -88,6 +99,8 @@ let schedulerTimer = 0;
 let audioStartedAt = 0;
 let nextNoteIndex = 0;
 const activeSources = new Set();
+const auditionVoices = [];
+const MAX_AUDITION_VOICES = 3;
 
 function addStringCell(parent, string, side) {
   const cell = document.createElement("div");
@@ -112,7 +125,7 @@ function addStringCell(parent, string, side) {
   parent.append(cell);
 }
 
-function renderMap() {
+function buildStringMap(container) {
   for (let i = 0; i < LEFT_STRINGS.length; i++) {
     const row = document.createElement("div");
     row.className = "map-row";
@@ -128,12 +141,29 @@ function renderMap() {
       empty.className = "empty-cell";
       row.append(empty);
     }
-    elements.stringMap.append(row);
+    container.append(row);
   }
+}
+
+function renderMap() {
+  buildStringMap(elements.stringMap);
 }
 
 function noteName(note) {
   return `${MIDI_NOTES[note % 12]}${Math.floor(note / 12) - 1}`;
+}
+
+function groupNotes(notes) {
+  const groups = [];
+  for (const note of notes) {
+    let group = groups[groups.length - 1];
+    if (!group || group.start !== note.start) {
+      group = { start: note.start, notes: [] };
+      groups.push(group);
+    }
+    group.notes.push(note);
+  }
+  return groups;
 }
 
 function readUint32(bytes, offset) {
@@ -316,6 +346,128 @@ function formatTime(seconds) {
   return `${Math.floor(wholeSeconds / 60)}:${String(wholeSeconds % 60).padStart(2, "0")}`;
 }
 
+function formatNoteTime(seconds) {
+  const hundredths = Math.round(Math.max(0, seconds) * 100);
+  const wholeSeconds = Math.floor(hundredths / 100);
+  return `${Math.floor(wholeSeconds / 60)}:${String(wholeSeconds % 60).padStart(2, "0")}.${String(hundredths % 100).padStart(2, "0")}`;
+}
+
+function renderNotation(groups, groupIndex) {
+  const svgNamespace = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNamespace, "svg");
+  svg.setAttribute("preserveAspectRatio", "none");
+  svg.setAttribute("aria-hidden", "true");
+  const visibleGroups = [];
+  for (let offset = -3; offset <= 3; offset++) {
+    const index = groupIndex + offset;
+    if (index < 0 || index >= groups.length) continue;
+    const notes = [...new Map(groups[index].notes.map((note) => [note.note, note])).values()]
+      .sort((a, b) => a.note - b.note);
+    const occupiedSteps = new Set();
+    const displayNotes = notes.map((note) => {
+      let displayMidi = note.note;
+      while (displayMidi < 64) displayMidi += 12;
+      let step = (Math.floor(displayMidi / 12) - 1) * 7
+        + "CDEFGAB".indexOf(MIDI_NOTES[note.note % 12][0]);
+      while (occupiedSteps.has(step)) {
+        displayMidi += 12;
+        step += 7;
+      }
+      occupiedSteps.add(step);
+      return { note, displayMidi, step };
+    });
+    visibleGroups.push({ index, offset, notes, displayNotes });
+  }
+  const groupLabels = visibleGroups.map(({ index, offset, notes }) => {
+    const label = `group ${index + 1}: ${notes.map((note) => noteName(note.note)).join(", ")}`;
+    return offset === 0 ? `current ${label}` : label;
+  });
+  const highestNoteY = visibleGroups.flatMap(({ displayNotes }) => displayNotes.map(({ step }) =>
+    60 - (step - (4 * 7 + 2)) * 4
+  )).reduce((highest, y) => Math.min(highest, y), 60);
+  const viewTop = Math.min(-32, Math.floor((highestNoteY - 8) / 8) * 8);
+  const viewHeight = 80 - viewTop;
+  svg.setAttribute("viewBox", `0 ${viewTop} 600 ${viewHeight}`);
+  elements.notationBanner.style.height = `${Math.max(112, Math.ceil(viewHeight * 0.9))}px`;
+  elements.notationBanner.setAttribute(
+    "aria-label",
+    `Notation for the current group and up to three previous and upcoming groups, shown at higher octaves than played: ${groupLabels.join("; ")}`
+  );
+
+  const addSvgElement = (tag, attributes, text) => {
+    const node = document.createElementNS(svgNamespace, tag);
+    for (const [name, value] of Object.entries(attributes)) node.setAttribute(name, String(value));
+    if (text) node.textContent = text;
+    svg.append(node);
+    return node;
+  };
+
+  const staffLines = [28, 36, 44, 52, 60];
+  for (const y of staffLines) {
+    addSvgElement("line", { x1: 34, x2: 590, y1: y, y2: y, class: "notation-staff-line" });
+  }
+  addSvgElement("text", { x: 7, y: 58, class: "notation-clef notation-treble" }, "𝄞");
+
+  const staffTop = 28;
+  const staffBottom = 60;
+  for (const { offset, displayNotes } of visibleGroups) {
+    const xCenter = 300 + offset * 76;
+    const staffNotes = displayNotes.map(({ note, step }) => {
+      const pitchName = MIDI_NOTES[note.note % 12];
+      const accidental = pitchName.slice(1);
+      return {
+        note,
+        accidental,
+        y: staffBottom - (step - (4 * 7 + 2)) * 4,
+        step
+      };
+    });
+
+    const occupiedLayoutSteps = new Set();
+    for (const item of staffNotes) {
+      const collision = occupiedLayoutSteps.has(item.step - 1) || occupiedLayoutSteps.has(item.step + 1);
+      const xOffset = collision ? (occupiedLayoutSteps.size % 2 === 0 ? -8 : 8) : 0;
+      occupiedLayoutSteps.add(item.step);
+      item.x = xCenter + xOffset;
+
+      if (item.y < staffTop) {
+        for (let ledgerY = staffTop - 8; ledgerY >= item.y; ledgerY -= 8) {
+          addSvgElement("line", { x1: item.x - 10, x2: item.x + 10, y1: ledgerY, y2: ledgerY, class: "notation-ledger-line" });
+        }
+      }
+      if (item.accidental) {
+        addSvgElement("text", { x: item.x - 17, y: item.y + 4, class: "notation-accidental" }, item.accidental === "#" ? "♯" : "♭");
+      }
+      addSvgElement("ellipse", {
+        cx: item.x,
+        cy: item.y,
+        rx: 3,
+        ry: 2.4,
+        transform: `rotate(-20 ${item.x} ${item.y})`,
+        class: `notation-notehead${offset === 0 ? " is-current" : " is-context"}`
+      });
+    }
+
+    if (staffNotes.length === 0) continue;
+    const averageY = staffNotes.reduce((sum, note) => sum + note.y, 0) / staffNotes.length;
+    const stemUp = averageY >= 44;
+    const anchor = staffNotes.reduce((selected, note) => {
+      if (stemUp) return note.y > selected.y ? note : selected;
+      return note.y < selected.y ? note : selected;
+    });
+    const stemX = anchor.x + (stemUp ? 6 : -6);
+    const stemEndY = anchor.y + (stemUp ? -26 : 26);
+    addSvgElement("line", {
+      x1: stemX,
+      x2: stemX,
+      y1: anchor.y,
+      y2: stemEndY,
+      class: `notation-stem${offset === 0 ? " is-current" : " is-context"}`
+    });
+  }
+  elements.notationBanner.replaceChildren(svg);
+}
+
 function showFeedback(message, isError = false) {
   elements.feedback.textContent = message;
   elements.feedback.classList.toggle("error", isError);
@@ -333,6 +485,110 @@ function updateTransport() {
   elements.seek.disabled = !song;
   elements.stop.disabled = !song;
   elements.playPause.disabled = !song;
+}
+
+function renderNoteSequence(force = false) {
+  if (!song || song.groups.length === 0) {
+    elements.noteSequence.hidden = true;
+    sequenceIndex = -1;
+    return;
+  }
+
+  let low = 0;
+  let high = song.groups.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (song.groups[middle].start <= position) low = middle + 1;
+    else high = middle;
+  }
+  const currentIndex = Math.max(0, low - 1);
+  if (!force && currentIndex === sequenceIndex) return;
+  sequenceIndex = currentIndex;
+  elements.noteSequence.hidden = false;
+  elements.sequencePosition.textContent = `Group ${currentIndex + 1} of ${song.groups.length}`;
+  renderNotation(song.groups, currentIndex);
+
+  elements.sequenceCards.replaceChildren();
+  for (let offset = -3; offset <= 3; offset++) {
+    const groupIndex = currentIndex + offset;
+    if (groupIndex < 0 || groupIndex >= song.groups.length) {
+      const spacer = document.createElement("span");
+      spacer.className = "sequence-card-spacer";
+      spacer.setAttribute("aria-hidden", "true");
+      elements.sequenceCards.append(spacer);
+      continue;
+    }
+
+    const group = song.groups[groupIndex];
+    const uniqueNotes = [...new Map(group.notes.map((note) => [note.note, note])).values()];
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = `sequence-card${offset === 0 ? " is-current" : ""}`;
+    card.setAttribute("aria-label", `Note group ${groupIndex + 1} of ${song.groups.length}, ${formatNoteTime(group.start)}, ${uniqueNotes.map((note) => noteName(note.note)).join(", ")}. Activate to hear mapped notes and seek.`);
+    if (offset === 0) card.setAttribute("aria-current", "step");
+    card.dataset.groupIndex = String(groupIndex);
+
+    const number = document.createElement("span");
+    number.className = "sequence-card-number";
+    number.textContent = String(groupIndex + 1).padStart(2, "0");
+    const activeMidi = new Set(uniqueNotes.map((note) => note.note));
+    const map = document.createElement("span");
+    map.className = "sequence-card-map";
+    map.setAttribute("aria-hidden", "true");
+    for (let rowIndex = 0; rowIndex < LEFT_STRINGS.length; rowIndex++) {
+      const row = document.createElement("span");
+      row.className = "sequence-card-map-row";
+      const left = document.createElement("span");
+      left.className = `sequence-card-string${activeMidi.has(LEFT_STRINGS[rowIndex].midi) ? " is-plucked" : ""}`;
+      const center = document.createElement("span");
+      center.className = "sequence-card-map-divider";
+      const right = document.createElement("span");
+      if (RIGHT_STRINGS[rowIndex]) {
+        right.className = `sequence-card-string${activeMidi.has(RIGHT_STRINGS[rowIndex].midi) ? " is-plucked" : ""}`;
+      }
+      row.append(left, center, right);
+      map.append(row);
+    }
+    card.append(number, map);
+    card.addEventListener("click", () => {
+      const wasPlaying = playing;
+      seekToGroup(groupIndex);
+      if (!wasPlaying) {
+        const chord = uniqueNotes
+          .map((note) => note.note)
+          .filter((midi) => byMidi.has(midi))
+          .slice(0, MAX_AUDITION_VOICES);
+        void auditionNotes(chord, true);
+      }
+    });
+    elements.sequenceCards.append(card);
+  }
+
+  elements.sequencePrevious.disabled = currentIndex === 0;
+  elements.sequenceNext.disabled = currentIndex === song.groups.length - 1;
+  const activeCard = elements.sequenceCards.querySelector(".is-current");
+  if (activeCard) {
+    const cardRect = activeCard.getBoundingClientRect();
+    const listRect = elements.sequenceCards.getBoundingClientRect();
+    const target = elements.sequenceCards.scrollLeft + cardRect.left - listRect.left
+      + (cardRect.width - elements.sequenceCards.clientWidth) / 2;
+    if (playing) elements.sequenceCards.scrollLeft = target;
+    else elements.sequenceCards.scrollTo({ left: target, behavior: "smooth" });
+  }
+}
+
+function seekToGroup(groupIndex) {
+  if (!song || !song.groups[groupIndex]) return;
+  position = song.groups[groupIndex].start;
+  hasStarted = true;
+  if (playing) {
+    positionAtStart = position;
+    startedAt = performance.now();
+    audioStartedAt = audioContext.currentTime;
+    beginAudioScheduling();
+  }
+  updateTransport();
+  updateHighlights();
 }
 
 function updateHighlights() {
@@ -354,6 +610,7 @@ function updateHighlights() {
     slot.classList.toggle("active", isActive);
     slot.classList.toggle("upcoming", !isActive && upcoming.has(key));
   }
+  renderNoteSequence();
 }
 
 function renderUnmappedNotes() {
@@ -395,10 +652,11 @@ function stopScheduledAudio() {
   schedulerTimer = 0;
   for (const source of activeSources) source.stop();
   activeSources.clear();
+  auditionVoices.length = 0;
 }
 
 function scheduleNote(note, startTime, duration) {
-  if (duration <= 0) return;
+  if (duration <= 0) return null;
   const fundamental = audioContext.createOscillator();
   const harmonic = audioContext.createOscillator();
   const harmonicGain = audioContext.createGain();
@@ -416,15 +674,17 @@ function scheduleNote(note, startTime, duration) {
   gain.gain.setValueAtTime(0.0001, startTime);
   gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, velocity * 0.12), startTime + 0.008);
   gain.gain.exponentialRampToValueAtTime(0.0001, startTime + Math.max(0.02, duration));
-  for (const source of [fundamental, harmonic]) {
+  const sources = [fundamental, harmonic];
+  for (const source of sources) {
     activeSources.add(source);
     source.addEventListener("ended", () => activeSources.delete(source), { once: true });
     source.start(startTime);
     source.stop(startTime + duration + 0.025);
   }
+  return { sources, endTime: startTime + duration + 0.025 };
 }
 
-async function auditionString(midi) {
+async function auditionNotes(notes, replaceExisting = false) {
   try {
     if (!audioContext) {
       const AudioContextType = window.AudioContext || window.webkitAudioContext;
@@ -432,10 +692,38 @@ async function auditionString(midi) {
       audioContext = new AudioContextType();
     }
     await audioContext.resume();
-    scheduleNote({ note: midi, velocity: 96 }, audioContext.currentTime, 0.65);
+    const now = audioContext.currentTime;
+    for (let i = auditionVoices.length - 1; i >= 0; i--) {
+      const voice = auditionVoices[i];
+      if (voice.endTime <= now || voice.sources.every((source) => !activeSources.has(source))) {
+        auditionVoices.splice(i, 1);
+      }
+    }
+    if (replaceExisting) {
+      for (const voice of auditionVoices.splice(0)) {
+        for (const source of voice.sources) {
+          if (activeSources.has(source)) source.stop();
+        }
+      }
+    }
+    const pitches = [...new Set(notes)].filter((midi) => byMidi.has(midi)).slice(0, MAX_AUDITION_VOICES);
+    for (const midi of pitches) {
+      while (auditionVoices.length >= MAX_AUDITION_VOICES) {
+        const oldestVoice = auditionVoices.shift();
+        for (const source of oldestVoice.sources) {
+          if (activeSources.has(source)) source.stop();
+        }
+      }
+      const voice = scheduleNote({ note: midi, velocity: 96 }, now, 0.65);
+      if (voice) auditionVoices.push(voice);
+    }
   } catch (error) {
     showFeedback(error instanceof Error ? error.message : "The string note could not be played.", true);
   }
+}
+
+async function auditionString(midi) {
+  await auditionNotes([midi]);
 }
 
 function lowerBoundNote(positionInSong) {
@@ -529,13 +817,14 @@ async function loadFile(file) {
   pausePlayback();
   try {
     const parsed = parseMidi(await file.arrayBuffer());
+    addLoadedFileButton(file);
     setSong(parsed, file.name.replace(/\.(mid|midi)$/i, ""), `${file.name} · ${parsed.trackCount} ${parsed.trackCount === 1 ? "track" : "tracks"}`);
   } catch (error) {
     song = null;
     position = 0;
     hasStarted = false;
     elements.songName.textContent = "No MIDI loaded";
-    elements.fileName.textContent = "or drop a .mid file here";
+    elements.fileName.textContent = "Drop a .mid or .midi file here";
     elements.seek.value = "0";
     elements.seek.disabled = true;
     elements.stop.disabled = true;
@@ -547,9 +836,26 @@ async function loadFile(file) {
   }
 }
 
+function addLoadedFileButton(file) {
+  const key = `${file.name}\u0000${file.size}\u0000${file.lastModified}`;
+  if (loadedMidiFiles.has(key)) return;
+
+  const button = document.createElement("button");
+  button.className = "example-button loaded-file-button";
+  button.type = "button";
+  button.textContent = file.name.replace(/\.(mid|midi)$/i, "");
+  button.title = file.name;
+  button.setAttribute("aria-label", `Load ${file.name}`);
+  button.addEventListener("click", () => loadFile(file));
+  loadedMidiFiles.set(key, button);
+  elements.loadedFiles.append(button);
+  elements.loadedFiles.hidden = false;
+}
+
 function setSong(parsed, title, description) {
   pausePlayback();
-  song = parsed;
+  song = { ...parsed, groups: groupNotes(parsed.notes) };
+  sequenceIndex = -1;
   position = 0;
   hasStarted = false;
   elements.songName.textContent = title;
@@ -698,6 +1004,58 @@ function updatePlaybackSpeed(speed) {
   }
 }
 elements.speed.addEventListener("change", () => updatePlaybackSpeed(elements.speed.value));
+elements.sequencePrevious.addEventListener("click", () => seekToGroup(sequenceIndex - 1));
+elements.sequenceNext.addEventListener("click", () => seekToGroup(sequenceIndex + 1));
+elements.sequenceCards.addEventListener("pointerdown", (event) => {
+  if (event.pointerType !== "mouse" || event.button !== 0) return;
+  sequenceDrag = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startScrollLeft: elements.sequenceCards.scrollLeft,
+    moved: false
+  };
+});
+window.addEventListener("pointermove", (event) => {
+  if (!sequenceDrag || sequenceDrag.pointerId !== event.pointerId) return;
+  const delta = event.clientX - sequenceDrag.startX;
+  if (!sequenceDrag.moved && Math.abs(delta) < 5) return;
+  sequenceDrag.moved = true;
+  elements.sequenceCards.classList.add("is-dragging");
+  elements.sequenceCards.scrollLeft = sequenceDrag.startScrollLeft - delta;
+  event.preventDefault();
+});
+window.addEventListener("pointerup", (event) => {
+  if (!sequenceDrag || sequenceDrag.pointerId !== event.pointerId) return;
+  const wasDragged = sequenceDrag.moved;
+  sequenceDrag = null;
+  elements.sequenceCards.classList.remove("is-dragging");
+  if (!wasDragged) return;
+
+  suppressSequenceClick = true;
+  const center = elements.sequenceCards.getBoundingClientRect().left + elements.sequenceCards.clientWidth / 2;
+  let closestCard = null;
+  let closestDistance = Infinity;
+  for (const card of elements.sequenceCards.querySelectorAll(".sequence-card")) {
+    const rect = card.getBoundingClientRect();
+    const distance = Math.abs(rect.left + rect.width / 2 - center);
+    if (distance < closestDistance) {
+      closestCard = card;
+      closestDistance = distance;
+    }
+  }
+  if (closestCard) seekToGroup(Number(closestCard.dataset.groupIndex));
+  window.setTimeout(() => { suppressSequenceClick = false; }, 0);
+});
+window.addEventListener("pointercancel", (event) => {
+  if (!sequenceDrag || sequenceDrag.pointerId !== event.pointerId) return;
+  sequenceDrag = null;
+  elements.sequenceCards.classList.remove("is-dragging");
+});
+elements.sequenceCards.addEventListener("click", (event) => {
+  if (!suppressSequenceClick) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}, true);
 
 elements.seek.disabled = true;
 elements.stop.disabled = true;

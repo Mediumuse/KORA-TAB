@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f4f2ec">
+    <meta name="theme-color" content="#f5f6f9">
     <title>Kora String Map</title>
     <script>
       try {
@@ -38,19 +38,11 @@
 
       <section class="player-card" aria-label="Choose a MIDI file">
         <div class="upload-row">
-          <label class="upload-button" for="midi-file">
-            <span class="upload-icon" aria-hidden="true">↑</span>
-            <span>Choose a MIDI file</span>
-          </label>
           <input id="midi-file" type="file" accept=".mid,.midi,audio/midi,audio/x-midi">
-          <button id="load-f-major-scale" class="example-button" type="button">F major scale</button>
-          <button id="load-f-major-pentatonic" class="example-button" type="button">F major pentatonic</button>
-          <button id="load-greensleeves" class="example-button" type="button">Greensleeves - D minor</button>
-          <a class="download-link" href="f-major-scale.mid" download="f-major-scale.mid">Download F major scale MIDI</a>
-          <a class="download-link" href="f-major-pentatonic.mid" download="f-major-pentatonic.mid">Download F major pentatonic MIDI</a>
-          <a class="download-link" href="greensleeves-Dm-kora.mid" download="Greensleeves - D minor.mid">Download Greensleeves - D minor MIDI</a>
           <div id="drop-zone" class="drop-zone" tabindex="0" role="button" aria-label="Choose or drop a MIDI file">
-            <span id="file-name">or drop a .mid file here</span>
+            <span class="drop-icon" aria-hidden="true">↓</span>
+            <span id="file-name">Drop a .mid or .midi file here</span>
+            <span class="drop-hint">or click to browse</span>
           </div>
         </div>
       </section>
@@ -59,8 +51,10 @@
         <div class="map-view-content">
           <div class="section-heading">
             <div>
-              <h2 id="map-title">Kora Map</h2>
-              <p class="map-tuning">Standard (Silaba) · F major</p>
+              <div>
+                <h2 id="map-title">Kora Map</h2>
+                <p class="map-tuning">Standard (Silaba) · F major</p>
+              </div>
             </div>
             <div class="map-heading-actions">
               <div class="map-footnote">
@@ -68,6 +62,12 @@
                 <span>Press a circle to hear its note. Octaves: left string 1 = F1; right string 1 = F2.</span>
               </div>
               <div class="map-heading-tools">
+                <div class="sample-buttons" aria-label="Load a sample MIDI">
+                  <button id="load-f-major-scale" class="example-button" type="button">F major scale</button>
+                  <button id="load-f-major-pentatonic" class="example-button" type="button">F major pentatonic</button>
+                  <button id="load-greensleeves" class="example-button" type="button">Greensleeves - D minor</button>
+                </div>
+                <div id="loaded-files" class="loaded-files" aria-label="Previously loaded MIDI files" hidden></div>
                 <button id="fullscreen-toggle" class="fullscreen-button" type="button" aria-pressed="false" aria-label="Enter fullscreen">⛶ <span>Fullscreen</span></button>
               </div>
             </div>
@@ -112,6 +112,20 @@
               </label>
             </div>
           </div>
+          <section id="note-sequence" class="note-sequence" aria-labelledby="note-sequence-title" hidden>
+            <div class="sequence-heading">
+              <div>
+                <h2 id="note-sequence-title">Note sequence</h2>
+                <p id="sequence-position" class="sequence-position" aria-live="polite"></p>
+              </div>
+            </div>
+            <div id="notation-banner" class="notation-banner" role="img" aria-label="Current MIDI notes in sheet notation"></div>
+            <div id="sequence-cards" class="sequence-cards" role="group" aria-label="Previous and upcoming note groups. Drag horizontally to browse; select a card to seek."></div>
+            <div class="sequence-navigation" role="group" aria-label="Navigate note sequence">
+              <button id="sequence-previous" class="sequence-arrow" type="button" aria-label="Previous note group" title="Previous note group">←</button>
+              <button id="sequence-next" class="sequence-arrow" type="button" aria-label="Next note group" title="Next note group">→</button>
+            </div>
+          </section>
           <p id="feedback" class="feedback" role="status" aria-live="polite">Choose a MIDI file to get started.</p>
         </div>
       </section>
